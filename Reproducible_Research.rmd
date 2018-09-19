@@ -1,0 +1,87 @@
+title	author	date	output
+Reproducable Research Week 2 Project
+Robert B. Jansen
+March 29, 2018
+html_document
+Load packages needed for this project
+library(reshape2)
+library(ggplot2)
+library(gridExtra)
+Load the activity.csv file
+activity <- read.csv("activity.csv")
+The activity date field is in the factor format and needs to be converted to date format.
+activity$date<-as.Date(activity$date)
+Prepare the data
+actMeltDate <- melt(activity, id.vars="date", measure.vars="steps", na.rm=FALSE)
+actCastDate <- dcast(actMeltDate, date ~ variable, sum)
+What is the mean total number of steps per day?
+Function 1 Calculate the total number of steps per day
+head(actCastDate)
+Function 2 Create a histogram of step count
+plot(actCastDate$date, actCastDate$steps, type="h", main="Histogram of Daily Steps", xlab="Date", ylab="Steps per Day", col="blue", lwd=8)
+abline(h=mean(actCastDate$steps, na.rm=TRUE), col="red", lwd=2)
+Function 3 Calculate and report the mean and median of the total number of steps taken per day.
+Mean
+paste("Mean Steps per Day =", mean(actCastDate$steps, na.rm=TRUE))
+Median
+paste("Median Steps per Day =", median(actCastDate$steps, na.rm=TRUE))
+What is the average daily activity pattern?
+Function 1: Make a time series plot (i.e. type ="1") of the 5-minute interval (x=axis) and the
+average number of steps taken, averaged across all days (y-axis).
+create daily mean
+actMeltInt <- melt(activity, id.vars="interval", measure.vars="steps", na.rm=TRUE)
+actCastInt <- dcast(actMeltInt, interval ~ variable, mean)
+Plot the mean graph
+plot(actCastInt$interval, actCastInt$steps, type="l", main="Frequency of Steps Taken at Each Interval", xlab="Interval ID", ylab="Steps", col="orange", lwd=2)
+abline(h=mean(actCastInt$steps, na.rm=TRUE), col="red", lwd=2)
+Function 2: Which 5-minute interval, on average across all the days in the dataset, contains
+the maximum number of steps?
+paste("Interval with max value =", actCastInt$interval[which(actCastInt$steps == max(actCastInt$steps))])
+paste("Maximum interval mean steps =", max(actCastInt$steps))
+Imputing Missing Values
+Note that there are a number of days/intervals where there are missing values (coded as NA).
+The presence of missing days may introduce bias into some calculations or summaries of the data.
+Function 1: Calculate and report the total number of missing values in the dataset (i.e. the total
+number of rows with NAs).
+sum(is.na(activity$steps))
+Function 2: Devise a strategy for filling in all of the missing values in the dataset. The
+strategy does not need to be sophisticated. For example, you could use the mean/median for
+that day, or the mean for that 5-minute interval, etc.
+stepsPerInt <- actCastInt
+actNoNA <- activity
+Function 3: Create a new dataset that is equal to the original dataset but with the missing
+data filled in.
+
+actMerge = merge(actNoNA, stepsPerInt, by="interval", suffixes=c(".act", ".spi"))
+naIndex = which(is.na(actNoNA$steps))
+actNoNA[naIndex,"steps"] = actMerge[naIndex,"steps.spi"]
+Function 4: Make a histogram of the total number of steps taken each day and Calculate
+and report the mean and median total number of steps taken per day. Do these values
+differ from the estimates from the first part of the assignment? What is the impact
+of imputing missing data on the estimates of the total daily number of steps?
+Are there differences in activity patterns between weekdays and weekends?
+For this part the weekdays() function may be of some help here. Use the dataset with
+the filled-in missing values for this part.
+for (i in 1:nrow(actNoNA)) {
+        if (weekdays(actNoNA$date[i]) == "Saturday" | weekdays(actNoNA$date[i]) == "Sunday") {
+                actNoNA$dayOfWeek[i] = "weekend"
+        } else {
+                actNoNA$dayOfWeek[i] = "weekday"
+        }
+}
+Function 1: Create a new factor variable in the dataset with two levels – “weekday”
+and “weekend” indicating whether a given date is a weekday or weekend day.
+actWeekday <- subset(actNoNA, dayOfWeek=="weekday")
+actWeekend <- subset(actNoNA, dayOfWeek=="weekend")
+Process the data
+actMeltWeekday <- melt(actWeekday, id.vars="interval", measure.vars="steps")
+actMeltWeekend <- melt(actWeekend, id.vars="interval", measure.vars="steps")
+actCastWeekday <- dcast(actMeltWeekday, interval ~ variable, mean)
+actCastWeekend <- dcast(actMeltWeekend, interval ~ variable, mean)
+Function 2:Make a panel plot containing a time series plot (i.e. type = "l") of the
+5-minute interval (x-axis) and the average number of steps taken, averaged across all
+weekday days or weekend days (y-axis). See the README file in the GitHub repository to
+see an example of what this plot should look like using simulated data.
+plot1 <- qplot(actCastWeekday$interval, actCastWeekday$steps, geom="line", data=actCastWeekday, type="bar", main="Steps by Interval - Weekday", xlab="Interval ID", ylab="Number of Steps")
+plot2 <- qplot(actCastWeekend$interval, actCastWeekend$steps, geom="line", data=actCastWeekend, type="bar", main="Steps by Interval - Weekend", xlab="Interval ID", ylab="Number of Steps")
+grid.arrange(plot1, plot2, nrow=2)
